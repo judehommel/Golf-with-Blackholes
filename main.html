@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+    <html>
+    <body style="margin:0; padding:0;">
+  <canvas id="canvas" width="1364" height="642"></canvas>
+  <script> 
+const canvas = document.getElementById ("canvas");
+const ctx = canvas.getContext ("2d");
+
+var golfBall = {x: 100, y: 100, size: 10, mass: 1};
+var gravSpot = {x: canvas.width/2, y: canvas.height/2, size: 5, mass: 100};
+var mouseDistance;
+var direction;
+var golfBallAccelX = 0;
+var golfBallAccelY = 0;
+
+var strokes = 0;
+var won = false;
+var died = false;
+
+var directionToGravspot;
+var gravspotDistance;
+var gravityForce = 6.67;
+
+var keyR = false;
+var keyShift = false;
+var paused = false;
+
+var blackHoles = [];
+
+class blackHole {
+    constructor(x, y, mass)
+    {
+        this.x = x;
+        this.y = y;
+        this.mass = mass;
+    }
+
+    draw()
+    {
+        ctx.beginPath();
+        if(this.mass > 0)
+            ctx.fillStyle = "#000000";
+        else if(this.mass < 0)
+            ctx.fillStyle = "#F0F0F0";
+        ctx.arc(this.x, this.y, Math.abs(this.mass) / 100, 0, Math.PI*2);
+        ctx.fill();
+    }
+};
+
+
+var e = window.event;
+
+var mousePressed = 0;
+var mouseReleased = 0;
+document.body.onmousedown = function() {
+    mousePressed = 1;
+    mouseReleased = 0;
+}
+document.body.onmouseup = function() {
+    mouseReleased = 1;
+    mousePressed = 0;
+}
+
+document.addEventListener('keydown', function(e) {
+    if(e.keyCode == 82) {
+        keyR = true;
+    }
+
+    if(e.shiftKey) {
+        keyShift = true;
+    }
+
+    if(e.keyCode == 32) {
+        if(!paused)
+            paused = true;
+        else if(paused)
+            paused = false;
+    }
+});
+
+document.addEventListener('keyup', function(e) {
+    if(e.shiftKey) {
+        keyShift = false;
+    }
+});
+
+var mouseX;
+var mouseY;
+    
+document.addEventListener("mousemove", mouseMoveHandler, false);
+   
+function mouseMoveHandler(e) {
+    mouseX = e.clientX;
+    mouseY = e.clientY;
+}   
+
+function update(progress) {
+    if(keyR)
+    {
+        golfBall.x = 100; 
+        golfBall.y = 100;
+        keyR = false;
+    }
+
+    if(mousePressed === 1)
+    {
+        if(paused)
+        {
+            if(!keyShift)
+                blackHoles.push(new blackHole(mouseX, mouseY, 1000));
+            else if(keyShift)
+                blackHoles.push(new blackHole(mouseX, mouseY, -1000));
+        }
+    }
+
+    if(!paused)
+    {
+        for (let i = 0; i < blackHoles.length; i++) {
+            distFromGrav = Math.sqrt(Math.pow(golfBall.x - blackHoles[i].x, 2) + Math.pow(golfBall.y - blackHoles[i].y, 2));
+            gravitationalPull = (gravityForce * golfBall.mass * blackHoles[i].mass)/Math.pow(distFromGrav, 2);
+            gravitationaldirection = Math.atan2(golfBall.y - blackHoles[i].y, golfBall.x - blackHoles[i].x);
+    
+            if(!(distFromGrav === 0) && gravitationalPull < 20 && (golfBallAccelX < 500 || golfBallAccelY < 500))
+            {
+                golfBallAccelX -= gravitationalPull * Math.cos(gravitationaldirection);
+                golfBallAccelY -= gravitationalPull * Math.sin(gravitationaldirection);
+            }
+        }
+
+        golfBall.x += golfBallAccelX / 50;
+        golfBall.y += golfBallAccelY / 50;
+    }
+
+    if(mousePressed === 1 || mouseReleased === 1)
+    {
+        mousePressed = 0;
+        mouseReleased = 0;
+    }
+}
+
+function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height)
+
+    ctx.fillStyle = "#000000";
+    ctx.font = "20px sans-serif";
+    ctx.fillText("Strokes: " + strokes, 50, 50);
+
+    if(paused)
+        ctx.fillText("Paused", canvas.width/2, 50);
+
+    ctx.beginPath();
+    ctx.fillStyle = "#FF0000";
+    ctx.arc(golfBall.x, golfBall.y, golfBall.size, 0, Math.PI*2);
+    ctx.fill();
+
+    for (let i = 0; i < blackHoles.length; i++) {
+        blackHoles[i].draw();
+    }
+}
+
+function loop(timestamp) {
+    var progress = timestamp - lastRender
+
+    update(progress)
+    draw()
+
+    lastRender = timestamp
+    window.requestAnimationFrame(loop)
+}
+var lastRender = 0
+window.requestAnimationFrame(loop)
+</script> </body> </html>
+
